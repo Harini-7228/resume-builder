@@ -102,6 +102,17 @@ const parseResumeFallback = (rawText) => {
         .map(s => s.trim())
         .filter(s => s.length > 1 && s.length < 40 && !/^\d+$/.test(s));
 
+    // --- Date conversion helper: "Jun 2023" → "2023-06" ---
+    const MONTH_MAP = { jan:"01",feb:"02",mar:"03",apr:"04",may:"05",jun:"06",jul:"07",aug:"08",sep:"09",oct:"10",nov:"11",dec:"12" };
+    const toIsoMonth = (str) => {
+        if (!str) return "";
+        if (/^\d{4}-\d{2}$/.test(str.trim())) return str.trim();
+        const m = str.match(/([A-Za-z]{3,9})\.?\s+(\d{4})/);
+        if (m) { const mo = MONTH_MAP[m[1].toLowerCase().slice(0,3)]; return mo ? `${m[2]}-${mo}` : ""; }
+        if (/^\d{4}$/.test(str.trim())) return `${str.trim()}-01`;
+        return "";
+    };
+
     // --- Education ---
     const eduLines = sections["EDUCATION"] || [];
     const education = [];
@@ -111,8 +122,8 @@ const parseResumeFallback = (rawText) => {
         const line = eduLines[i];
         if (/b\.?tech|b\.?e\.?|m\.?tech|bachelor|master|phd|mba|diploma|higher secondary|secondary school|high school|hsc|ssc|\bbs\b|\bms\b/i.test(line)) {
             const institution = eduLines[i + 1] || "";
-            const dateStr = (eduLines[i + 1] + " " + (eduLines[i + 2] || "")).match(DATE_RE)?.[0] || "";
-            education.push({ institution: institution.match(DATE_RE) ? "" : institution, degree: line, field: "", graduation_date: dateStr, gpa: "" });
+            const rawDate = (eduLines[i + 1] + " " + (eduLines[i + 2] || "")).match(DATE_RE)?.[0] || "";
+            education.push({ institution: institution.match(DATE_RE) ? "" : institution, degree: line, field: "", graduation_date: toIsoMonth(rawDate), gpa: "" });
             i += 2;
         } else { i++; }
     }
@@ -120,7 +131,7 @@ const parseResumeFallback = (rawText) => {
     // --- Experience ---
     const expLines = sections["EXPERIENCE"] || [];
     const experience = [];
-    const DATE_RANGE_RE = /([A-Za-z]{3,9}\.?\s+\d{4})\s*[-–—]\s*((?:[A-Za-z]{3,9}\.?\s+\d{4})|Present|Current)/i;
+    const DATE_RANGE_RE = /([A-Za-z]{3,9}\.?\s+\d{4})\s*[-–—\t]+\s*((?:[A-Za-z]{3,9}\.?\s+\d{4})|Present|Current)/i;
     let currentExp = null;
     for (const line of expLines) {
         const dateMatch = line.match(DATE_RANGE_RE);
@@ -129,8 +140,8 @@ const parseResumeFallback = (rawText) => {
             const position = line.replace(dateMatch[0], "").trim();
             currentExp = {
                 company: "", position,
-                start_date: dateMatch[1]?.trim() || "",
-                end_date: dateMatch[2]?.trim() || "",
+                start_date: toIsoMonth(dateMatch[1]?.trim() || ""),
+                end_date: /present|current/i.test(dateMatch[2] || "") ? "" : toIsoMonth(dateMatch[2]?.trim() || ""),
                 description: "",
                 is_current: /present|current/i.test(dateMatch[2] || ""),
             };
@@ -205,6 +216,13 @@ const RESUME_JSON_STRUCTURE = `{
   "education": [{ "institution": "", "degree": "", "field": "", "graduation_date": "", "gpa": "" }]
 }`;
 
+// Helper: convert AI API errors to friendly messages
+const friendlyAIError = (error) => {
+    if (error.status === 403) return { status: 403, message: "AI features are unavailable — your API key has no credits. Please add credits at console.x.ai to enable AI features." };
+    if (error.status === 429) return { status: 429, message: "AI service is busy. Please wait 30 seconds and try again." };
+    return { status: error.status || 500, message: error.message || "AI service error" };
+};
+
 // POST /api/ai/enhance-pro-sum
 export const enhanceProfessionalSummary = async (req, res) => {
     try {
@@ -223,8 +241,8 @@ export const enhanceProfessionalSummary = async (req, res) => {
         });
         return res.status(200).json({ enhancedContent: response.choices[0].message.content });
     } catch (error) {
-        console.error("AI Enhance Summary Error:", error);
-        return res.status(error.status || 500).json({ message: error.message || "AI service error" });
+        const { status, message } = friendlyAIError(error);
+        return res.status(status).json({ message });
     }
 };
 
@@ -246,8 +264,8 @@ export const enhanceJobDescription = async (req, res) => {
         });
         return res.status(200).json({ enhancedContent: response.choices[0].message.content });
     } catch (error) {
-        console.error("AI Enhance Job Desc Error:", error);
-        return res.status(error.status || 500).json({ message: error.message || "AI service error" });
+        const { status, message } = friendlyAIError(error);
+        return res.status(status).json({ message });
     }
 };
 

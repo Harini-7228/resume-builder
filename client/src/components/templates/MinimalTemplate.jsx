@@ -2,11 +2,11 @@
 const MinimalTemplate = ({ data, accentColor }) => {
     const formatDate = (dateStr) => {
         if (!dateStr) return "";
-        const [year, month] = dateStr.split("-");
-        return new Date(year, month - 1).toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "short"
-        });
+        if (/^\d{4}-\d{2}$/.test(dateStr.trim())) {
+            const [year, month] = dateStr.split("-");
+            return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString("en-US", { year: "numeric", month: "short" });
+        }
+        return dateStr;
     };
 
     return (
