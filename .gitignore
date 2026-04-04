@@ -38,7 +38,7 @@ tmp/
 tmp_pdf_test.mjs  # if test file
 
 # Uploads (if sensitive or large)
-# uploads/  # Uncomment if uploads should be ignored
+uploads/
 
 # Lint output files
 eslint_report.json
