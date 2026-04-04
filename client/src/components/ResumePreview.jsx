@@ -45,33 +45,23 @@ const ResumePreview = ({ data, template, accentColor, classes = "" }) => {
                         overflow: hidden;
                         background: white;
                     }
-                    /* Hide everything on the page */
-                    body > * {
-                        display: none !important;
+                    /* Hide all elements via visibility so children can still override */
+                    body * {
+                        visibility: hidden;
                     }
-                    /* Show only the resume preview */
-                    #resume-print-wrapper,
-                    #resume-print-wrapper > *,
+                    /* Make only the resume visible */
                     #resume-preview,
                     #resume-preview * {
-                        display: revert !important;
                         visibility: visible !important;
                     }
-                    #resume-print-wrapper {
+                    #resume-preview {
                         position: fixed;
                         top: 0;
                         left: 0;
-                        width: 8.5in;
-                        height: 11in;
-                        overflow: hidden;
-                        background: white;
-                    }
-                    #resume-preview {
                         margin: 0;
                         padding: 0;
                         box-shadow: none !important;
                         border: none !important;
-                        transform-origin: top left;
                     }
                 }
         `}</style>
