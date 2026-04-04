@@ -108,7 +108,30 @@ const ResumeBuilder = () => {
   }
 
   const downloadResume = () => {
-    window.print();
+    const preview = document.getElementById('resume-preview');
+    if (!preview) { window.print(); return; }
+
+    // Letter page in CSS px at 96dpi: 816 × 1056
+    const PAGE_W = 816;
+    const PAGE_H = 1056;
+
+    // Reset any previous zoom so we measure the natural size
+    preview.style.zoom = '';
+
+    const scaleW = PAGE_W / preview.scrollWidth;
+    const scaleH = PAGE_H / preview.scrollHeight;
+    const scale = Math.min(scaleW, scaleH, 1); // only scale down, never up
+
+    if (scale < 1) {
+      preview.style.zoom = scale;
+    }
+
+    requestAnimationFrame(() => {
+      window.print();
+      setTimeout(() => {
+        preview.style.zoom = '';
+      }, 1000);
+    });
   }
 
   const saveChanges = async () => {
