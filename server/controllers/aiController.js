@@ -1,5 +1,4 @@
-import * as pdfParseImport from "pdf-parse";
-const pdfParse = pdfParseImport?.default || pdfParseImport;
+import { PDFParse } from "pdf-parse";
 
 import Resume from "../models/Resume.js";
 import ai from "../configs/ai.js";
@@ -182,10 +181,11 @@ export const uploadResumeFile = async (req, res) => {
 
         console.log("File:", req.file.originalname, "Size:", req.file.size);
 
-        // Parse PDF buffer using CJS require (ESM-safe)
+        // Parse PDF buffer using pdf-parse v2
         let resumeText;
         try {
-            const parsed = await pdfParse(req.file.buffer);
+            const parser = new PDFParse({ data: req.file.buffer });
+            const parsed = await parser.getText();
             resumeText = parsed.text || "";
             console.log("PDF parsed, text length:", resumeText.length);
         } catch (pdfErr) {
