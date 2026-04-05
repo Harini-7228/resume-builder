@@ -3,7 +3,7 @@ import { PDFParse } from "pdf-parse";
 import Resume from "../models/Resume.js";
 import ai from "../configs/ai.js";
 
-const DEFAULT_AI_MODEL = process.env.OPENAI_MODEL || "grok-3-mini";
+const DEFAULT_AI_MODEL = process.env.OPENAI_MODEL || "llama-3.3-70b-versatile";
 
 // Helper: extract JSON from AI response string
 const extractJsonFromString = (text) => {
