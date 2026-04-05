@@ -37,4 +37,6 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
+    console.log(`GROK_API_URL = ${process.env.GROK_API_URL || "(not set)"}`);
+    console.log(`GROK_API_KEY set = ${!!process.env.GROK_API_KEY}`);
 });

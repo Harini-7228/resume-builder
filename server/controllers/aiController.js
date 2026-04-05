@@ -221,7 +221,7 @@ const friendlyAIError = (error) => {
     const rawBody = error?.error?.message || error?.message || "Unknown error";
     console.error(`[AI Error] status=${error.status} body="${rawBody}"`);
     if (error.status === 401) return { status: 401, message: `AI error: Invalid API key — please check your GROK_API_KEY in Secrets. (${rawBody})` };
-    if (error.status === 403) return { status: 403, message: `AI features unavailable — API key has no credits or access. Please add credits at console.x.ai. (${rawBody})` };
+    if (error.status === 403) return { status: 403, message: `AI features unavailable — your team has no credits. Add credits at: https://console.x.ai/team/f96499f0-0781-4463-899c-8277f9739b4f` };
     if (error.status === 429) return { status: 429, message: "AI service is busy. Please wait 30 seconds and try again." };
     return { status: error.status || 500, message: `AI service error ${error.status || ""}: ${rawBody}` };
 };
