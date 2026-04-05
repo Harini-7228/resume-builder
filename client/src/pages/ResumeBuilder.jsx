@@ -135,17 +135,44 @@ const ResumeBuilder = () => {
   }
 
   const saveChanges = async () => {
-    if (isSaving) return; // Prevent duplicate requests
-    
+    if (isSaving) return;
+
     try {
       setIsSaving(true);
-      const { data } = await api.put('/api/resumes/update/', { 
-        resumeId, 
-        resumeData 
-      }, { 
-        headers: { Authorization: `Bearer ${token}` } 
-      });
-      toast.success(data.message || "Resume saved successfully!");
+
+      const image = resumeData.personal_info?.image;
+      const hasNewImage = image && typeof image === 'object'; // File object (not yet uploaded)
+
+      let response;
+      if (hasNewImage) {
+        // Send as multipart/form-data so multer can pick up the image file
+        const formData = new FormData();
+        formData.append('image', image);
+        formData.append('resumeId', resumeId);
+        formData.append('removeBackground', removeBackground);
+        // Strip the File object before serialising the rest as JSON
+        const resumeDataCopy = {
+          ...resumeData,
+          personal_info: { ...resumeData.personal_info, image: undefined }
+        };
+        formData.append('resumeData', JSON.stringify(resumeDataCopy));
+        response = await api.put('/api/resumes/update/', formData, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } else {
+        response = await api.put('/api/resumes/update/', {
+          resumeId,
+          resumeData
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+
+      // Replace local state with saved data (File object → ImageKit URL)
+      if (response.data.resume) {
+        setResumeData(response.data.resume);
+      }
+      toast.success(response.data.message || "Resume saved successfully!");
     } catch (error) {
       console.error(error);
       toast.error(error?.response?.data?.message || "Failed to save resume");
