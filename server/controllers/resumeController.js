@@ -86,10 +86,13 @@ export const updateResume = async (req, res) => {
         let resumeDataCopy = typeof resumeData === 'string' ? JSON.parse(resumeData) : JSON.parse(JSON.stringify(resumeData));
 
         if (image) {
+            // ImageKit v7 requires Blob/ReadStream/Base64 — not a raw Buffer
+            const base64 = image.buffer.toString('base64');
+            const dataUri = `data:${image.mimetype || 'image/jpeg'};base64,${base64}`;
 
             const response = await imagekit.files.upload({
-                file: image.buffer,
-                fileName: 'resume-logo.png',
+                file: dataUri,
+                fileName: image.originalname || 'resume-logo.png',
                 folder: 'user-resumes',
                 transformation: {
                     pre: 'w-300,h-300,fo-face,z-0.75' + (removeBackground ? ',e-bgremove' : '')
