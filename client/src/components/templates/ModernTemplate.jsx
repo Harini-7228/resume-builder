@@ -10,10 +10,20 @@ const ModernTemplate = ({ data, accentColor }) => {
                 return dateStr;
         };
 
+        const profileImage = data.personal_info?.image
+            ? (typeof data.personal_info.image === 'string'
+                ? data.personal_info.image
+                : URL.createObjectURL(data.personal_info.image))
+            : null;
+
         return (
                 <div className="max-w-4xl mx-auto bg-white text-gray-800">
                         {/* Header */}
-                        <header className="p-8 text-white" style={{ backgroundColor: accentColor }}>
+                        <header className="p-8 text-white flex items-center gap-6" style={{ backgroundColor: accentColor }}>
+                                {profileImage && (
+                                    <img src={profileImage} alt="Profile" className="w-20 h-20 rounded-full object-cover shrink-0 ring-2 ring-white/50" />
+                                )}
+                                <div>
                                 <h1 className="text-4xl font-light mb-3">
                                         {data.personal_info?.full_name || "Your Name"}
                                 </h1>
@@ -49,6 +59,7 @@ const ModernTemplate = ({ data, accentColor }) => {
                                                         <span className="break-all text-xs">{data.personal_info.website.split("https://")[1] ? data.personal_info.website.split("https://")[1] : data.personal_info.website}</span>
                                                 </a>
                                         )}
+                                </div>
                                 </div>
                         </header>
 

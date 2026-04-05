@@ -9,10 +9,20 @@ const MinimalTemplate = ({ data, accentColor }) => {
         return dateStr;
     };
 
+    const profileImage = data.personal_info?.image
+        ? (typeof data.personal_info.image === 'string'
+            ? data.personal_info.image
+            : URL.createObjectURL(data.personal_info.image))
+        : null;
+
     return (
         <div className="max-w-4xl mx-auto p-8 bg-white text-gray-900 font-light">
             {/* Header */}
-            <header className="mb-10">
+            <header className="mb-10 flex items-center gap-6">
+                {profileImage && (
+                    <img src={profileImage} alt="Profile" className="w-20 h-20 rounded-full object-cover shrink-0" />
+                )}
+                <div>
                 <h1 className="text-4xl font-thin mb-4 tracking-wide">
                     {data.personal_info?.full_name || "Your Name"}
                 </h1>
@@ -27,6 +37,7 @@ const MinimalTemplate = ({ data, accentColor }) => {
                     {data.personal_info?.website && (
                         <span className="break-all">{data.personal_info.website}</span>
                     )}
+                </div>
                 </div>
             </header>
 
