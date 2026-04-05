@@ -27,6 +27,7 @@ class GroqAI {
   }
 }
 
-const ai = new GroqAI(process.env.GROQ_API_KEY, process.env.GROQ_API_URL);
+const GROQ_API_URL = process.env.GROQ_API_URL || "https://api.groq.com/openai/v1";
+const ai = new GroqAI(process.env.GROQ_API_KEY, GROQ_API_URL);
 
 export default ai;
