@@ -49,6 +49,13 @@ const PersonalInfoForm = ({ data, onChange, removeBackground, setRemoveBackgroun
             onChange={(e) => handleChange('image', e.target.files[0])}
           />
         </label>
+        {!data.image && (
+          <div className="mt-4 p-2 bg-blue-50 border border-blue-100 rounded-md">
+            <p className="text-[10px] sm:text-xs text-blue-600 leading-tight">
+              <strong>Tip:</strong> PDF parsing extracts text only. Please upload your profile photo manually for the best result.
+            </p>
+          </div>
+        )}
         {typeof data.image === 'object' && (
           <div className="flex flex-col gap-1 sm:pl-4 text-sm w-full sm:w-auto">
             <p>Remove Background</p>

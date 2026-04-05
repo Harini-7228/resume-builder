@@ -1,9 +1,11 @@
 import React, { useState } from 'react'
+import { useSelector } from 'react-redux'
 import { Plus, Briefcase, Trash2, Sparkles, Loader2 } from 'lucide-react'
 import api from '../configs/api'
 import toast from 'react-hot-toast'
 
 const ExperienceForm = ({ data, onChange }) => {
+    const { token } = useSelector(state => state.auth)
     const [enhancingIndex, setEnhancingIndex] = useState(null);
 
     const addExperience = () => {
@@ -34,7 +36,6 @@ const ExperienceForm = ({ data, onChange }) => {
         }
         try {
             setEnhancingIndex(index)
-            const token = localStorage.getItem('token')
             const { data: responseData } = await api.post('/api/ai/enhance-job-desc', { userContent: experience.description }, {
                 headers: { Authorization: `Bearer ${token}` }
             })
@@ -60,7 +61,7 @@ const ExperienceForm = ({ data, onChange }) => {
                 </div>
                 <button onClick={addExperience} className='flex items-center gap-2 px-3 py-1 text-sm bg-purple-100 text-purple-700 rounded hover:bg-purple-200 transition-colors'>
                     <Plus className="size-4" />
-                    Add exeperience
+                    Add experience
                 </button>
             </div>
             {data.length === 0 ? (

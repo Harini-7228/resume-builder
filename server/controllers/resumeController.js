@@ -83,25 +83,52 @@ export const updateResume = async (req, res) => {
         const userId = req.userId;
         const { resumeId, resumeData, removeBackground } = req.body;
         const image = req.file;
-        let resumeDataCopy = typeof resumeData === 'string' ? JSON.parse(resumeData) : JSON.parse(JSON.stringify(resumeData));
+
+        if (!resumeData && !image) {
+            return res.status(400).json({ message: "Missing resume data or image" });
+        }
+
+        let resumeDataCopy;
+        try {
+            resumeDataCopy = typeof resumeData === 'string' ? JSON.parse(resumeData) : JSON.parse(JSON.stringify(resumeData || {}));
+        } catch (parseErr) {
+            console.error("Malformed resumeData:", parseErr.message);
+            return res.status(400).json({ message: "Invalid resume data format" });
+        }
+        
+        resumeDataCopy.personal_info = resumeDataCopy.personal_info || {};
+        
+        // Ensure remove_background is persisted at the root level if provided
+        if (removeBackground !== undefined) {
+            resumeDataCopy.remove_background = removeBackground === 'true' || removeBackground === true;
+        }
 
         if (image) {
             // ImageKit v7 requires Blob/ReadStream/Base64 — not a raw Buffer
             const base64 = image.buffer.toString('base64');
             const dataUri = `data:${image.mimetype || 'image/jpeg'};base64,${base64}`;
+            
+            const isBgRemoveEnabled = resumeDataCopy.remove_background === true;
 
             const response = await imagekit.files.upload({
                 file: dataUri,
                 fileName: image.originalname || 'resume-logo.png',
                 folder: 'user-resumes',
                 transformation: {
-                    pre: 'w-300,h-300,fo-face,z-0.75' + (removeBackground ? ',e-bgremove' : '')
+                    pre: 'w-300,h-300,fo-face,z-0.75' + (isBgRemoveEnabled ? ',e-bgremove' : '')
                 }
             });
 
-            resumeDataCopy.personal_info.image = response.url
+            resumeDataCopy.personal_info.image = response.url;
+        } else if (resumeDataCopy.personal_info.image && typeof resumeDataCopy.personal_info.image !== 'string') {
+            delete resumeDataCopy.personal_info.image;
         }
-        const resume = await Resume.findOneAndUpdate({ userId, _id: resumeId }, resumeDataCopy, { new: true })
+
+        if (resumeDataCopy.personal_info.image === undefined) {
+            delete resumeDataCopy.personal_info.image;
+        }
+
+        const resume = await Resume.findOneAndUpdate({ userId, _id: resumeId }, resumeDataCopy, { new: true });
 
         return res.status(200).json({ message: "Saved succesfully", resume })
 

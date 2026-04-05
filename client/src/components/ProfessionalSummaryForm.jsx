@@ -1,9 +1,11 @@
 import React, { useState } from 'react'
+import { useSelector } from 'react-redux'
 import { Sparkles, Loader2 } from 'lucide-react'
 import api from '../configs/api'
 import toast from 'react-hot-toast'
 
 const ProfessionalSummaryForm = ({ data, onChange }) => {
+    const { token } = useSelector(state => state.auth)
     const [loading, setLoading] = useState(false);
 
     const handleAIEnhance = async () => {
@@ -12,7 +14,6 @@ const ProfessionalSummaryForm = ({ data, onChange }) => {
         }
         try {
             setLoading(true)
-            const token = localStorage.getItem('token')
             const { data: responseData } = await api.post('/api/ai/enhance-pro-sum', { userContent: data }, {
                 headers: { Authorization: `Bearer ${token}` }
             })

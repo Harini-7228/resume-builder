@@ -74,8 +74,13 @@ const Login = () => {
             } else {
                 toast.success(data.message)
                 if (state === 'forgot') {
-                    setState('login')
-                    setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }))
+                    if (data.resetUrl) {
+                        // In development/testing, the backend bypasses email and returns the link
+                        window.location.href = data.resetUrl;
+                    } else {
+                        setState('login')
+                        setFormData(prev => ({ ...prev, password: '', confirmPassword: '' }))
+                    }
                 }
                 if (state === 'reset') {
                     navigate('/login?state=login')

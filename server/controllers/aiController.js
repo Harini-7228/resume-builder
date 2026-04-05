@@ -4,6 +4,8 @@ import Resume from "../models/Resume.js";
 import ai from "../configs/ai.js";
 
 const DEFAULT_AI_MODEL = process.env.OPENAI_MODEL || "llama-3.3-70b-versatile";
+const FAST_AI_MODEL = "llama3-8b-8192";
+const POSITION_KEYWORDS = /(?:developer|engineer|analyst|manager|specialist|lead|architect|consultant|representative|assistant|head|coordinator|administrator|supervisor|designer|officer|associate|intern|vp|director|c-level|consultant|technician|representative|agent|clerk|specialist|writer|editor|accountant|auditor|consultant)\b/i;
 
 // Helper: extract JSON from AI response string
 const extractJsonFromString = (text) => {
@@ -57,20 +59,39 @@ const parseResumeFallback = (rawText) => {
 
     // --- Contact info (regex on flat text) ---
     const email = flat.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "";
-    const phone = flat.match(/(?:\+?\d[\d\s\-().]{5,}\d)/)?.[0]?.trim() || "";
+    const phone = flat.match(/(?:\+?\d[\d\s\-().]{8,}\d)/)?.[0]?.trim() || "";
     const linkedin = flat.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com(?:\/[^\s,<>"]*)?/i)?.[0] || "";
     const website = flat.match(/https?:\/\/(?!(?:www\.)?linkedin\.com)[^\s,<>"]+/i)?.[0] || "";
-    const location = flat.match(/\b([A-Z][a-zA-Z\s]+,\s*(?:[A-Z]{2,3}|[A-Z][a-zA-Z]+))\b/)?.[1] || "";
+    
+    // Look for City, State/Country (e.g., NY, USA or New York, NY)
+    const locationMatch = flat.match(/\b([A-Z][a-z\s]+,\s*[A-Z]{2,3})\b|\b([A-Z][a-z\s]+,\s*[A-Z][a-z\s]+)\b/);
+    const location = locationMatch ? (locationMatch[1] || locationMatch[2]) : "";
 
     // --- Section detection ---
-    const SECTION_RE = /^(CONTACT|SUMMARY|PROFESSIONAL SUMMARY|OBJECTIVE|EXPERIENCE|WORK EXPERIENCE|EDUCATION|SKILLS|PROJECTS?|CERTIFICATIONS?|ACHIEVEMENTS?|S UMMARY)$/i;
+    // ... rest of the logic remains ...
+    const SECTION_RE = /^(CONTACT|SUMMARY|PROFESSIONAL SUMMARY|OBJECTIVE|EXPERIENCE|WORK EXPERIENCE|PROFESSIONAL EXPERIENCE|WORK HISTORY|EMPLOYMENT|EMPLOYMENT HISTORY|CAREER HISTORY|EDUCATION|ACADEMIC BACKGROUND|SKILLS|TECHNICAL SKILLS|TECHNICAL SUMMARY|PROJECTS?|CERTIFICATIONS?|ACHIEVEMENTS?|AWARDS & HONORS|AWARDS|S UMMARY)$/i;
     const sections = {};
     let currentSection = "header";
     sections[currentSection] = [];
 
     for (const line of lines) {
-        if (SECTION_RE.test(line.replace(/\s+/g, " "))) {
-            currentSection = line.replace(/\s+/g, " ").toUpperCase().replace("S UMMARY", "SUMMARY").replace("WORK EXPERIENCE", "EXPERIENCE").replace("PROFESSIONAL SUMMARY", "SUMMARY");
+        const cleanedLine = line.replace(/\s+/g, " ").trim();
+        if (SECTION_RE.test(cleanedLine)) {
+            currentSection = cleanedLine.toUpperCase()
+                .replace("S UMMARY", "SUMMARY")
+                .replace("WORK EXPERIENCE", "EXPERIENCE")
+                .replace("PROFESSIONAL EXPERIENCE", "EXPERIENCE")
+                .replace("WORK HISTORY", "EXPERIENCE")
+                .replace("EMPLOYMENT HISTORY", "EXPERIENCE")
+                .replace("EMPLOYMENT", "EXPERIENCE")
+                .replace("CAREER HISTORY", "EXPERIENCE")
+                .replace("PROFESSIONAL SUMMARY", "SUMMARY")
+                .replace("ACADEMIC BACKGROUND", "EDUCATION")
+                .replace("TECHNICAL SKILLS", "SKILLS")
+                .replace("TECHNICAL SUMMARY", "SUMMARY")
+                .replace("AWARDS & HONORS", "ACHIEVEMENTS")
+                .replace("AWARDS", "ACHIEVEMENTS")
+                .replace("CERTIFICATIONS", "ACHIEVEMENTS");
             sections[currentSection] = [];
         } else {
             (sections[currentSection] = sections[currentSection] || []).push(line);
@@ -131,29 +152,102 @@ const parseResumeFallback = (rawText) => {
     // --- Experience ---
     const expLines = sections["EXPERIENCE"] || [];
     const experience = [];
-    const DATE_RANGE_RE = /([A-Za-z]{3,9}\.?\s+\d{4})\s*[-–—\t]+\s*((?:[A-Za-z]{3,9}\.?\s+\d{4})|Present|Current)/i;
+    const DATE_RANGE_RE = /((?:[A-Za-z]{3,9}\.?\s+\d{4})|(?:\d{2}\/\d{4})|(?:\d{4}))\s*[-–—\t]+\s*((?:[A-Za-z]{3,9}\.?\s+\d{4})|(?:\d{2}\/\d{4})|(?:\d{4})|Present|Current)/i;
+    const COMPANY_KEYWORDS = /inc\b|corp\b|tech\b|solutions\b|limited\b|ltd\b|group\b|systems\b|technologies\b/i;
+    
     let currentExp = null;
+    let lastShortLines = []; // Buffer for potential titles/companies
+    let linesSinceExpStart = 0;
+
     for (const line of expLines) {
         const dateMatch = line.match(DATE_RANGE_RE);
+        
         if (dateMatch) {
+            // BACKTRACKING: If we're starting a new job, check if the previous job's description 
+            // ended with a line that looks like a Job Title.
+            let stolenTitle = "";
+            if (currentExp && currentExp.description) {
+                const descLines = currentExp.description.split("\n");
+                const lastLine = descLines[descLines.length - 1].trim();
+                if (lastLine && lastLine.length < 60 && POSITION_KEYWORDS.test(lastLine) && !lastLine.endsWith(".")) {
+                    stolenTitle = lastLine;
+                    descLines.pop();
+                    currentExp.description = descLines.join("\n").trim();
+                }
+            }
+
             if (currentExp) experience.push(currentExp);
-            const position = line.replace(dateMatch[0], "").trim();
+            
+            // Extract what's on the SAME line as the date
+            let onLineTitle = line.replace(dateMatch[0], "").replace(/^[•\-\t\s]+|[•\-\t\s]+$/g, "").trim();
+            
+            // If the text on the same line is too long, it's likely a description merger
+            if (onLineTitle.length > 60 || (onLineTitle.endsWith(".") && !COMPANY_KEYWORDS.test(onLineTitle)) || onLineTitle.includes(":")) {
+                onLineTitle = ""; 
+            }
+
+            // Decide position/company using onLineTitle, stolenTitle, and buffer
+            let position = onLineTitle || stolenTitle;
+            let company = "";
+
+            if (!position && lastShortLines.length > 0) {
+                const candidate1 = lastShortLines.pop(); 
+                const candidate2 = lastShortLines.pop(); 
+                
+                if (candidate2) {
+                    if (POSITION_KEYWORDS.test(candidate2) && !POSITION_KEYWORDS.test(candidate1)) {
+                        position = candidate2; company = candidate1;
+                    } else if (POSITION_KEYWORDS.test(candidate1) && !POSITION_KEYWORDS.test(candidate2)) {
+                        position = candidate1; company = candidate2;
+                    } else {
+                        position = candidate1; company = candidate2;
+                    }
+                } else {
+                    position = candidate1;
+                }
+            } else if (position && lastShortLines.length > 0) {
+                company = lastShortLines.pop();
+            }
+
+            // Final swap if company looks more like a title
+            if (company && POSITION_KEYWORDS.test(company) && !POSITION_KEYWORDS.test(position)) {
+                const tmp = position; position = company; company = tmp;
+            }
+
             currentExp = {
-                company: "", position,
+                company: company || "",
+                position: position || "Experience Item",
                 start_date: toIsoMonth(dateMatch[1]?.trim() || ""),
                 end_date: /present|current/i.test(dateMatch[2] || "") ? "" : toIsoMonth(dateMatch[2]?.trim() || ""),
                 description: "",
                 is_current: /present|current/i.test(dateMatch[2] || ""),
             };
+            lastShortLines = [];
+            linesSinceExpStart = 0;
         } else if (currentExp) {
-            if (!currentExp.company && line.length < 60 && !line.startsWith("-") && !line.startsWith("•")) {
+            linesSinceExpStart++;
+            const looksLikeCompany = (line.length < 60 && !line.startsWith("-") && !line.startsWith("•") && (linesSinceExpStart <= 2 || COMPANY_KEYWORDS.test(line)));
+            if (!currentExp.company && looksLikeCompany) {
                 currentExp.company = line;
             } else {
-                currentExp.description = (currentExp.description + " " + line).trim();
+                // To support backtracking later, we'll store description with newlines
+                currentExp.description = (currentExp.description + "\n" + line).trim();
+            }
+        } else {
+            if (line.length < 80 && !line.startsWith("-") && !line.startsWith("•") && (!line.endsWith(".") || COMPANY_KEYWORDS.test(line))) {
+                lastShortLines.push(line);
+                if (lastShortLines.length > 3) lastShortLines.shift(); 
             }
         }
     }
-    if (currentExp) experience.push(currentExp);
+    // Final cleanup of newlines in descriptions
+    experience.forEach(exp => {
+        if (exp.description) exp.description = exp.description.replace(/\n/g, " ").trim();
+    });
+    if (currentExp) {
+        currentExp.description = currentExp.description.replace(/\n/g, " ").trim();
+        experience.push(currentExp);
+    }
 
     // --- Projects ---
     const projectLines = sections["PROJECT"] || sections["PROJECTS"] || [];
@@ -220,7 +314,7 @@ const RESUME_JSON_STRUCTURE = `{
 const friendlyAIError = (error) => {
     const rawBody = error?.error?.message || error?.message || "Unknown error";
     console.error(`[AI Error] status=${error.status} body="${rawBody}"`);
-    if (error.status === 401) return { status: 401, message: `AI error: Invalid API key — please check your GROK_API_KEY in Secrets. (${rawBody})` };
+    if (error.status === 401) return { status: 401, message: `AI error: Invalid API key — please check your GROQ_API_KEY in Secrets. (${rawBody})` };
     if (error.status === 403) return { status: 403, message: `AI features unavailable — your team has no credits. Add credits at: https://console.x.ai/team/f96499f0-0781-4463-899c-8277f9739b4f` };
     if (error.status === 429) return { status: 429, message: "AI service is busy. Please wait 30 seconds and try again." };
     return { status: error.status || 500, message: `AI service error ${error.status || ""}: ${rawBody}` };
@@ -332,11 +426,11 @@ export const uploadResumeFile = async (req, res) => {
 
         if (!title) return res.status(400).json({ message: "Resume title is required" });
         if (!userId) return res.status(401).json({ message: "User not authenticated" });
-        if (!process.env.GROK_API_KEY) return res.status(500).json({ message: "GROK_API_KEY is not set in .env" });
+        if (!process.env.GROQ_API_KEY) return res.status(500).json({ message: "GROQ_API_KEY is not set in .env" });
 
         console.log("File:", req.file.originalname, "Size:", req.file.size);
 
-        // Parse PDF buffer using pdf-parse v2
+        // Parse PDF buffer using PDFParse
         let resumeText;
         try {
             const parser = new PDFParse({ data: req.file.buffer });
@@ -357,25 +451,26 @@ export const uploadResumeFile = async (req, res) => {
         safeResumeText = cleanedText.slice(0, 5000);
         console.log("Cleaned text length:", safeResumeText.length);
 
-        const response = await callAIWithRetry({
-            model: DEFAULT_AI_MODEL,
-            messages: [
-                {
-                    role: "system",
-                    content: `You are an expert resume parser. The text may come from a multi-column PDF so the order of words may be jumbled. Carefully identify and extract each resume section (name, profession, contact, summary, experience, education, skills, projects) and return ONLY a valid JSON object with no additional text, markdown, or explanation.`,
-                },
-                {
-                    role: "user",
-                    content: `Parse this resume text and return ONLY valid JSON matching exactly this structure (use empty strings/arrays for missing fields, never null):\n${RESUME_JSON_STRUCTURE}\n\nResume text:\n${safeResumeText}`,
-                },
-            ],
-            temperature: 0.1,
-        });
+        console.log("Using High-Speed AI Parser for maximum 'Instanity'...");
+        let parsedData;
+        try {
+            const aiResponse = await callAIWithRetry({
+                model: FAST_AI_MODEL,
+                messages: [
+                    { role: "system", content: "You are an expert resume parser. Extract structured data from the text and return valid JSON only." },
+                    { role: "user", content: `Parse this resume text and return ONLY valid JSON matching this exact structure: ${RESUME_JSON_STRUCTURE}\n\nResume text:\n${safeResumeText}` },
+                ],
+                temperature: 0.1,
+                max_tokens: 2000,
+            });
+            parsedData = extractJsonFromString(aiResponse.choices[0].message.content);
+        } catch (aiErr) {
+            console.error("Fast AI parser failed, spinning up fallback...", aiErr.message);
+        }
 
-        let parsedData = extractJsonFromString(response.choices[0].message.content);
         if (!parsedData) {
-            console.warn("AI returned invalid JSON, using fallback parser");
-            parsedData = parseResumeFallback(resumeText);
+            console.log("AI failed or took too long, using improved Regex fallback...");
+            parsedData = parseResumeFallback(safeResumeText);
         }
 
         const newResume = await Resume.create({
@@ -386,10 +481,11 @@ export const uploadResumeFile = async (req, res) => {
             project: parsedData.project || [],
             education: parsedData.education || [],
             skills: parsedData.skills || [],
+            remove_background: false
         });
 
         console.log("Resume created:", newResume._id);
-        return res.status(200).json({ resumeId: newResume._id, message: "Resume uploaded and parsed successfully" });
+        return res.status(200).json({ resumeId: newResume._id, message: "Resume uploaded instantly and accurately" });
 
     } catch (error) {
         console.error("Upload Resume File Error:", { status: error.status, message: error.message, name: error.name });

@@ -4,24 +4,23 @@ import ClassicTemplate from './templates/ClassicTemplate'
 import MinimalTemplate from './templates/MinimalTemplate'
 import MinimalImageTemplate from './templates/MinimalImageTemplate'
 
-const ResumePreview = ({ data, template, accentColor, classes = "" }) => {
+const ResumePreview = ({ data, template, accentColor, removeBackground, classes = "" }) => {
 
     const renderTemplate = () => {
         switch (template) {
             case "modern":
-                return <ModernTemplate data={data} accentColor={accentColor} />;
+                return <ModernTemplate data={data} accentColor={accentColor} removeBackground={removeBackground} />;
             case "classic":
-                return <ClassicTemplate data={data} accentColor={accentColor} />;
+                return <ClassicTemplate data={data} accentColor={accentColor} removeBackground={removeBackground} />;
 
             case "minimal":
-                return <MinimalTemplate data={data} accentColor={accentColor} />;
+                return <MinimalTemplate data={data} accentColor={accentColor} removeBackground={removeBackground} />;
 
             case "minimal-image":
-                return <MinimalImageTemplate data={data} accentColor={accentColor} />;
-
+                return <MinimalImageTemplate data={data} accentColor={accentColor} removeBackground={removeBackground} />;
 
             default:
-                return <ClassicTemplate data={data} accentColor={accentColor} />;
+                return <ClassicTemplate data={data} accentColor={accentColor} removeBackground={removeBackground} />;
 
         }
     }
@@ -33,35 +32,49 @@ const ResumePreview = ({ data, template, accentColor, classes = "" }) => {
 
             <style>{`
                 @page {
-                    size: letter;
+                    size: a4 portrait;
                     margin: 0;
                 }
                 @media print {
                     html, body {
-                        margin: 0;
-                        padding: 0;
-                        width: 8.5in;
-                        height: 11in;
-                        overflow: hidden;
-                        background: white;
+                        width: 100%;
+                        height: auto;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        background: white !important;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
                     }
-                    /* Hide all elements via visibility so children can still override */
                     body * {
                         visibility: hidden;
                     }
-                    /* Make only the resume visible */
                     #resume-preview,
                     #resume-preview * {
                         visibility: visible !important;
                     }
                     #resume-preview {
-                        position: fixed;
+                        position: absolute;
                         top: 0;
                         left: 0;
-                        margin: 0;
-                        padding: 0;
+                        width: 100vw;
+                        height: auto !important;
+                        min-height: 100vh;
+                        margin: 0 !important;
+                        padding: 0 !important;
                         box-shadow: none !important;
                         border: none !important;
+                        background: white !important;
+                    }
+                    #resume-preview > div {
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        margin: 0 !important;
+                    }
+                    #resume-preview section {
+                        margin-bottom: calc(1.5rem + var(--fill-gap, 0px)) !important;
+                    }
+                    #resume-preview * {
+                        box-sizing: border-box !important;
                     }
                 }
         `}</style>

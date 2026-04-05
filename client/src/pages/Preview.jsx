@@ -18,6 +18,9 @@ const Preview = () => {
         // ✅ FIX: fetch from real API public endpoint instead of dummyResumeData
         const { data } = await api.get(`/api/resumes/public/${resumeId}`)
         setResumeData(data.resume)
+        if (data.resume?.title) {
+          document.title = `${data.resume.title} - Resume Builder`
+        }
       } catch (err) {
         console.error("Failed to load public resume:", err)
         setError(err?.response?.data?.message || "Resume not found or is not public")
@@ -26,6 +29,9 @@ const Preview = () => {
       }
     }
     loadResume()
+    return () => {
+      document.title = "Resume Builder"
+    }
   }, [resumeId])
 
   if (isLoading) {

@@ -16,14 +16,14 @@ const Hero = () => {
     return (
         <div>
             <>
-                <div className="min-h-screen pb-20">
+                <div className="min-h-screen pb-4">
                     {/* Navbar */}
                     <nav className="z-50 flex items-center justify-between w-full py-4 px-6 md:px-16 lg:px-24 xl:px-40 text-sm">
-                        <a href="https://prebuiltui.com">
+                        <Link to="/">
                             <img src="/resume_logo.svg" alt="logo" className="h-24 w-auto" />
-                        </a>
+                        </Link>
 
-                        <div className="hidden md:flex items-center gap-8 transition duration-500 text-slate-800">
+                        <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-8 transition duration-500 text-slate-800">
                             <a href="#" className="hover:text-blue-600 transition">Home</a>
                             <a href="#features" className="hover:text-blue-600 transition">Features</a>
                             <a href="#testimonials" className="hover:text-blue-600 transition">Testimonials</a>
@@ -73,7 +73,7 @@ const Hero = () => {
                         <div className="absolute top-28 xl:top-10 -z-10 left-1/4 size-72 sm:size-96 xl:size-120 2xl:size-132 bg-blue-300 blur-[100px] opacity-30"></div>
 
                         {/* Avatars + Stars */}
-                        <div className="flex items-center mt-24">
+                        <div className="flex items-center mt-2">
                             <div className="flex -space-x-3 pr-3">
                                 <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?q=80&w=200" alt="user3" className="size-8 object-cover rounded-full border-2 border-white hover:-translate-y-0.5 transition z-[1]" />
                                 <img src="https://images.unsplash.com/photo-1633332755192-727a05c4013d?q=80&w=200" alt="user1" className="size-8 object-cover rounded-full border-2 border-white hover:-translate-y-0.5 transition z-2" />
@@ -103,8 +103,8 @@ const Hero = () => {
 
                         {/* CTA Buttons */}
                         <div className="flex items-center gap-4 ">
-                            <Link to="/app" className="bg-blue-500 hover:bg-blue-600 text-white rounded-full px-9 h-12 m-1 ring-offset-2 ring-1 ring-blue-400 flex items-center transition-colors">
-                                {user ? "Go to Dashboard" : "Get started"}
+                            <Link to="/login?state=register" className="bg-blue-500 hover:bg-blue-600 text-white rounded-full px-9 h-12 m-1 ring-offset-2 ring-1 ring-blue-400 flex items-center transition-colors">
+                                Get started
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-right ml-1 size-4" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
                             </Link>
                             <button className="flex items-center gap-2 border border-slate-400 hover:bg-blue-50 transition rounded-full px-7 h-12 text-slate-700">

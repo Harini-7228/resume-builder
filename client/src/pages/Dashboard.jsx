@@ -1,4 +1,4 @@
-import { UploadCloudIcon, Plus as PlusIcon, FilePen, Trash2, Pencil, X as XIcon, UploadCloud, LoaderCircleIcon } from 'lucide-react'
+import { UploadCloudIcon, Plus as PlusIcon, FilePen, Trash2, Pencil, X as XIcon, LoaderCircleIcon } from 'lucide-react'
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
@@ -59,7 +59,7 @@ const Dashboard = () => {
       formData.append('resume', resume)
       formData.append('title', title)
 
-      toast.loading("Uploading and parsing resume... This may take up to 2 minutes.")
+      // Removed toast.loading notification to make the upload silent as requested
 
       const { data } = await api.post("/api/ai/upload-resume-file", formData, {
         headers: { Authorization: `Bearer ${token}` },
@@ -130,7 +130,7 @@ const Dashboard = () => {
       <div className='max-w-7xl mx-auto px-4 py-8'>
 
         {/* ✅ FIX: show real user name from Redux store */}
-        <p className='text-2xl font-medium mb-6 bg-gradient-to-r from-slate-600 to-slate-700 bg-clip-text text-transparent sm:hidden'>
+        <p className='text-xl sm:text-2xl font-medium mb-6 bg-gradient-to-r from-slate-600 to-slate-700 bg-clip-text text-transparent'>
           Welcome, {user?.name || 'User'}
         </p>
 
@@ -190,7 +190,7 @@ const Dashboard = () => {
               <label htmlFor="resume-input" className="block text-sm text-slate-700">
                 Select resume file
                 <div className='flex flex-col items-center justify-center gap-2 border text-slate-400 border-slate-400 border-dashed rounded-md p-4 py-10 my-4 hover:border-blue-500 hover:text-blue-700 cursor-pointer transition-colors'>
-                  {resume ? <p className='text-blue-700'>{resume.name}</p> : <><UploadCloud className='size-14 stroke-1' /><p>Click to upload PDF</p></>}
+                  {resume ? <p className='text-blue-700'>{resume.name}</p> : <><UploadCloudIcon className='size-14 stroke-1' /><p>Click to upload PDF</p></>}
                 </div>
               </label>
               <input type="file" id='resume-input' accept='.pdf' hidden onChange={(e) => setResume(e.target.files[0])} disabled={isLoading} />

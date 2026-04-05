@@ -1,14 +1,7 @@
 import { Mail, Phone, MapPin } from "lucide-react";
+import { formatDate } from "../../utils/formatters";
 
-const MinimalImageTemplate = ({ data, accentColor }) => {
-    const formatDate = (dateStr) => {
-        if (!dateStr) return "";
-        if (/^\d{4}-\d{2}$/.test(dateStr.trim())) {
-            const [year, month] = dateStr.split("-");
-            return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString("en-US", { year: "numeric", month: "short" });
-        }
-        return dateStr;
-    };
+const MinimalImageTemplate = ({ data, accentColor, removeBackground }) => {
 
     return (
         <div className="max-w-5xl mx-auto bg-white text-zinc-800">
@@ -16,16 +9,14 @@ const MinimalImageTemplate = ({ data, accentColor }) => {
 
                 <div className="col-span-1  py-10">
                     {/* Image */}
-                    {data.personal_info?.image && typeof data.personal_info.image === 'string' ? (
-                        <div className="mb-6">
-                            <img src={data.personal_info.image} alt="Profile" className="w-32 h-32 object-cover rounded-full mx-auto" style={{ background: accentColor+'70' }} />
+                    {data.personal_info?.image && (
+                        <div className={`mb-6 w-36 h-36 mx-auto rounded-full p-1`} style={{ backgroundColor: removeBackground ? 'white' : accentColor + '30', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                            <img
+                                src={typeof data.personal_info.image === 'string' ? data.personal_info.image : URL.createObjectURL(data.personal_info.image)}
+                                alt="Profile"
+                                className="w-full h-full object-cover rounded-full"
+                            />
                         </div>
-                    ) : (
-                        data.personal_info?.image && typeof data.personal_info.image === 'object' ? (
-                            <div className="mb-6">
-                                <img src={URL.createObjectURL(data.personal_info.image)} alt="Profile" className="w-32 h-32 object-cover rounded-full mx-auto" />
-                            </div>
-                        ) : null
                     )}
                 </div>
 

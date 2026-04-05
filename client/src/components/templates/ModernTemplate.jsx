@@ -1,14 +1,7 @@
 import { Mail, Phone, MapPin, Linkedin, Globe } from "lucide-react";
+import { formatDate } from "../../utils/formatters";
 
-const ModernTemplate = ({ data, accentColor }) => {
-        const formatDate = (dateStr) => {
-                if (!dateStr) return "";
-                if (/^\d{4}-\d{2}$/.test(dateStr.trim())) {
-                    const [year, month] = dateStr.split("-");
-                    return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString("en-US", { year: "numeric", month: "short" });
-                }
-                return dateStr;
-        };
+const ModernTemplate = ({ data, accentColor, removeBackground }) => {
 
         const profileImage = data.personal_info?.image
             ? (typeof data.personal_info.image === 'string'
@@ -21,7 +14,9 @@ const ModernTemplate = ({ data, accentColor }) => {
                         {/* Header */}
                         <header className="p-8 text-white flex items-center gap-6" style={{ backgroundColor: accentColor }}>
                                 {profileImage && (
-                                    <img src={profileImage} alt="Profile" className="w-20 h-20 rounded-full object-cover shrink-0 ring-2 ring-white/50" />
+                                    <div className="w-20 h-20 rounded-full overflow-hidden p-1" style={{ backgroundColor: removeBackground ? 'white' : accentColor + '33', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                                        <img src={profileImage} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                                    </div>
                                 )}
                                 <div>
                                 <h1 className="text-4xl font-light mb-3">

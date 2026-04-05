@@ -40,6 +40,7 @@ const ResumeBuilder = () => {
     const {data} = await api.get('/api/resumes/get/' +resumeId, {headers: {Authorization: `Bearer ${token}`}})
     if(data.resume){
       setResumeData(data.resume)
+      setRemoveBackground(data.resume.remove_background || false)
       document.title = data.resume.title
     }
    } catch (error) {
@@ -67,6 +68,9 @@ const ResumeBuilder = () => {
 
   useEffect(() => {
     loadExistingResume()
+    return () => {
+      document.title = "Resume Builder"
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resumeId])
 
@@ -111,26 +115,62 @@ const ResumeBuilder = () => {
     const preview = document.getElementById('resume-preview');
     if (!preview) { window.print(); return; }
 
-    // Letter page in CSS px at 96dpi: 816 × 1056
-    const PAGE_W = 816;
-    const PAGE_H = 1056;
+    const originalFontSize = document.documentElement.style.fontSize || '100%';
+    const inner = preview.firstElementChild;
+    const oldPreviewWidth = preview.style.width;
+    const oldInnerWidth = inner.style.width;
+    const oldInnerMaxWidth = inner.style.maxWidth;
 
-    // Reset any previous zoom so we measure the natural size
-    preview.style.zoom = '';
+    // Force exact A4 dimensions at 96 DPI for perfect simulation of printed text wrapping
+    // We target 1030 height instead of 1122 to safely account for standard default browser print margins
+    const PAGE_W = 794;
+    const PAGE_H = 1030;
 
-    const scaleW = PAGE_W / preview.scrollWidth;
-    const scaleH = PAGE_H / preview.scrollHeight;
-    const scale = Math.min(scaleW, scaleH, 1); // only scale down, never up
+    preview.style.width = `${PAGE_W}px`;
+    if (inner) {
+      inner.style.setProperty('width', '100%', 'important');
+      inner.style.setProperty('max-width', '100%', 'important');
+    }
 
-    if (scale < 1) {
-      preview.style.zoom = scale;
+    let currentHeight = preview.scrollHeight;
+    let scale = 1.0;
+
+    if (currentHeight > PAGE_H) {
+      // Loop to accurately test real rendered height at exact paper width
+      while (currentHeight > PAGE_H && scale > 0.40) {
+        scale -= 0.01;
+        document.documentElement.style.fontSize = `${scale * 100}%`;
+        currentHeight = preview.scrollHeight;
+      }
+    }
+
+    // Perfectly distribute the micro remainder space so the page bottom is exactly hit
+    let fillGap = 0;
+    if (currentHeight < PAGE_H) {
+      const sections = preview.querySelectorAll('section');
+      if (sections.length > 0) {
+        // Distribute leftover, but cap it so short resumes don't look completely exploded (max 20px per section)
+        const leftover = Math.min(PAGE_H - currentHeight, sections.length * 20 * scale);
+        fillGap = leftover / sections.length / scale;
+        document.documentElement.style.setProperty('--fill-gap', `${fillGap}px`);
+      }
     }
 
     requestAnimationFrame(() => {
-      window.print();
+      // Revert temporary measurement styles so native CSS print media engine takes control fully
+      preview.style.width = oldPreviewWidth;
+      if (inner) {
+        inner.style.width = oldInnerWidth;
+        inner.style.maxWidth = oldInnerMaxWidth;
+      }
+
       setTimeout(() => {
-        preview.style.zoom = '';
-      }, 1000);
+        window.print();
+        setTimeout(() => {
+          document.documentElement.style.fontSize = originalFontSize;
+          document.documentElement.style.setProperty('--fill-gap', `0px`);
+        }, 1000);
+      }, 100);
     });
   }
 
@@ -141,7 +181,7 @@ const ResumeBuilder = () => {
       setIsSaving(true);
 
       const image = resumeData.personal_info?.image;
-      const hasNewImage = image && typeof image === 'object'; // File object (not yet uploaded)
+      const hasNewImage = image && (image instanceof File || image instanceof Blob); // Actual file object ready for upload
 
       let response;
       if (hasNewImage) {
@@ -153,6 +193,7 @@ const ResumeBuilder = () => {
         // Strip the File object before serialising the rest as JSON
         const resumeDataCopy = {
           ...resumeData,
+          remove_background: removeBackground,
           personal_info: { ...resumeData.personal_info, image: undefined }
         };
         formData.append('resumeData', JSON.stringify(resumeDataCopy));
@@ -162,7 +203,7 @@ const ResumeBuilder = () => {
       } else {
         response = await api.put('/api/resumes/update/', {
           resumeId,
-          resumeData
+          resumeData: { ...resumeData, remove_background: removeBackground }
         }, {
           headers: { Authorization: `Bearer ${token}` }
         });
@@ -275,7 +316,7 @@ const ResumeBuilder = () => {
               </div>
             </div>
 
-            <ResumePreview data={resumeData} template={resumeData.template} accentColor={resumeData.accent_color} />
+            <ResumePreview data={resumeData} template={resumeData.template} accentColor={resumeData.accent_color} removeBackground={removeBackground} />
           </div>
         </div>
 

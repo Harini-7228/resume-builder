@@ -1,5 +1,7 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
+import compression from "compression";
 import "dotenv/config"
 import connectDB from "./configs/db.js";
 import userRouter from "./routes/userRoutes.js";
@@ -12,8 +14,13 @@ const PORT = process.env.PORT || 3000;
 // Database connection
 await connectDB()
 
+app.use(helmet());
+app.use(compression());
 app.use(express.json())
-app.use(cors())
+app.use(cors({
+    origin: process.env.ALLOWED_ORIGIN || "*", // Default to '*' in dev, set specific URL in prod
+    credentials: true
+}))
 
 app.get('/', (req, res) => res.send("Server is live..."))
 app.use('/api/users', userRouter)
@@ -37,6 +44,4 @@ app.use((err, req, res, next) => {
 
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
-    console.log(`GROK_API_URL = ${process.env.GROK_API_URL || "(not set)"}`);
-    console.log(`GROK_API_KEY set = ${!!process.env.GROK_API_KEY}`);
 });

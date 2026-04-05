@@ -32,7 +32,7 @@ const sendPasswordResetEmail = async (email, resetUrl) => {
 
     if (!transporter) {
         console.log('Password reset email not sent because email transport is not configured. Reset URL:', resetUrl);
-        return;
+        return { success: false, url: resetUrl };
     }
 
     await transporter.sendMail({
@@ -41,6 +41,7 @@ const sendPasswordResetEmail = async (email, resetUrl) => {
         subject,
         html
     });
+    return { success: true };
 }
 
 // controller for user registration
@@ -52,13 +53,24 @@ export const registerUser = async (req, res) => {
 
         // check if required fields are present
         if (!name || !email || !password) {
-            return res.status(400).json({ message: "Missing required fields" })
+            return res.status(400).json({ message: "All fields are required" })
+        }
+        
+        // validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ message: "Invalid email format" });
+        }
+
+        // validate password length
+        if (password.length < 6) {
+            return res.status(400).json({ message: "Password must be at least 6 characters long" });
         }
 
         // check if user already exists
         const user = await User.findOne({ email: email.toLowerCase() })
         if (user) {
-            return res.status(400).json({ message: "User already exists" })
+            return res.status(400).json({ message: "An account with this email already exists" })
         }
 
         //create new user
@@ -158,9 +170,16 @@ export const forgotPassword = async (req, res) => {
         user.resetPasswordExpires = Date.now() + 1000 * 60 * 60; // 1 hour
         await user.save();
 
-        const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+        const clientUrl = process.env.CLIENT_URL || req.headers.origin || "http://localhost:5173";
         const resetUrl = `${clientUrl}/login?state=reset&token=${resetToken}`;
-        await sendPasswordResetEmail(user.email, resetUrl);
+        const emailStatus = await sendPasswordResetEmail(user.email, resetUrl);
+
+        if (emailStatus && !emailStatus.success) {
+            return res.status(200).json({ 
+                message: "Dev Mode: Email not configured, auto-redirecting to reset link...",
+                resetUrl: emailStatus.url 
+            });
+        }
 
         return res.status(200).json({ message: "If your email exists, a reset link was sent." });
     } catch (error) {

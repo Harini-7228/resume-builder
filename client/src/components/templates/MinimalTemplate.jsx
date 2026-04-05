@@ -1,13 +1,6 @@
+import { formatDate } from "../../utils/formatters";
 
-const MinimalTemplate = ({ data, accentColor }) => {
-    const formatDate = (dateStr) => {
-        if (!dateStr) return "";
-        if (/^\d{4}-\d{2}$/.test(dateStr.trim())) {
-            const [year, month] = dateStr.split("-");
-            return new Date(parseInt(year), parseInt(month) - 1).toLocaleDateString("en-US", { year: "numeric", month: "short" });
-        }
-        return dateStr;
-    };
+const MinimalTemplate = ({ data, accentColor, removeBackground }) => {
 
     const profileImage = data.personal_info?.image
         ? (typeof data.personal_info.image === 'string'
@@ -20,7 +13,9 @@ const MinimalTemplate = ({ data, accentColor }) => {
             {/* Header */}
             <header className="mb-10 flex items-center gap-6">
                 {profileImage && (
-                    <img src={profileImage} alt="Profile" className="w-20 h-20 rounded-full object-cover shrink-0" />
+                    <div className="w-20 h-20 rounded-full overflow-hidden p-1" style={{ backgroundColor: removeBackground ? 'white' : accentColor + '33', WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact' }}>
+                        <img src={profileImage} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                    </div>
                 )}
                 <div>
                 <h1 className="text-4xl font-thin mb-4 tracking-wide">

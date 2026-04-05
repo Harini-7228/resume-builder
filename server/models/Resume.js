@@ -17,6 +17,9 @@ const ResumeSchema = new mongoose.Schema({
     accent_color: {
         type: String, default: "#3B82F6"
     },
+    remove_background: {
+        type: Boolean, default: false
+    },
     professional_summary: {type: String, default: ''},
     skills: [{type: String}],
     personal_info: {

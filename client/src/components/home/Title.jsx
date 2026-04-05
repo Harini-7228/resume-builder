@@ -4,7 +4,7 @@ const Title = ({ title, description }) => {
   return (
     <div className = 'text-center mt-6 text-slate-700'>
       <h2 className='text-3xl sm:text-4xl font-medium'>{title}</h2>
-      <p>{description}</p>
+      <p className='mt-3'>{description}</p>
     </div>
   )
 }
